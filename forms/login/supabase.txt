@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fill Up Form</title>
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: Arial, Helvetica, sans-serif; background: #f7f7f7; margin: 0; padding: 0; }
+        .header { background-color: #1976d2; color: #fff; padding: 30px 10px; text-align: center; font-size: 2.2rem; letter-spacing: 1px; }
+        .container { max-width: 420px; margin: 40px auto 0 auto; background: #fff; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); padding: 32px 24px 24px 24px; }
+        h1 { margin-top: 0; color: #1976d2; text-align: center; font-size: 1.7rem; }
+        form { display: flex; flex-direction: column; gap: 14px; }
+        label { font-weight: 500; color: #1976d2; margin-bottom: 4px; }
+        input[type="text"], input[type="tel"], select { padding: 10px; border-radius: 6px; border: 1px solid #bdbdbd; font-size: 1rem; background: #f9f9f9; transition: border 0.2s; }
+        input[type="text"]:focus, input[type="tel"]:focus, select:focus { border: 1.5px solid #1976d2; outline: none; background: #e3f2fd; }
+        input[type="submit"] { background: #1976d2; color: #fff; border: none; border-radius: 8px; padding: 14px; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin-top: 10px; transition: background 0.2s, box-shadow 0.2s; box-shadow: 0 2px 8px rgba(25, 118, 210, 0.08); }
+        input[type="submit"]:hover { background: #1565c0; box-shadow: 0 2px 8px rgba(25, 118, 210, 0.15); }
+        .back-link { display: block; text-align: center; margin-top: 22px; color: #1976d2; text-decoration: none; font-weight: 500; transition: color 0.2s; }
+        .back-link:hover { color: #0d47a1; text-decoration: underline; }
+        .footer { background-color: #f1f1f1; padding: 10px; text-align: center; margin-top: 40px; font-size: 1rem; color: #888; }
+        @media (max-width: 600px) {
+            .container { margin: 16px; padding: 18px 8px 16px 8px; }
+            .header { font-size: 1.3rem; padding: 18px 4px; }
+        }
+    </style>
+    <script>
+        // Supabase config: do NOT embed service_role or other secrets in front-end. Set a public ANON key in a local config (gitignored) or on the server.
+        const SUPABASE_URL = 'https://vklhpcwjuqfleushgbdj.supabase.co';
+        const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || null; // set this in a separate, gitignored config
+        let supabase = null;
+        if (SUPABASE_ANON_KEY) {
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        } else {
+            console.warn('Supabase anon key not set on the client. Falling back to local storage for payments. Do NOT commit service_role keys to repo.');
+        }
+
+        async function redirectToPaymentMethods(event) {
+            event.preventDefault();
+            const name = document.getElementById('name').value;
+            const address = document.getElementById('address').value;
+            const contact = document.getElementById('contact').value;
+            const service = document.getElementById('service').value;
+
+            // Insert into Supabase table 'payments' when configured; otherwise fallback to local storage
+            if (supabase) {
+                const { data, error } = await supabase
+                    .from('payments')
+                    .insert([{ name, address, contact, service }]);
+
+                if (error) {
+                    alert('Error saving to database: ' + error.message);
+                    return;
+                }
+            } else {
+                // Save to localStorage for payment receipt when no Supabase key
+                console.warn('Saving payment locally because Supabase is not configured.');
+            }
+
+            // Save to localStorage for payment receipt
+            localStorage.setItem('paymentInfo', JSON.stringify({
+                name, address, contact, service
+            }));
+            window.location.href = "../payment-methods.html";
+        }
+    </script>
+</head>
+<body>
+    <div class="header">e-Pantok Fill Up Form</div>
+    <div class="container">
+        <h1>Fill Up Form</h1>
+        <form onsubmit="redirectToPaymentMethods(event)">
+            <div>
+                <label for="name">Full Name:</label>
+                <input type="text" id="name" name="name" required>
+            </div>
+            <div>
+                <label for="address">Address:</label>
+                <input type="text" id="address" name="address" required>
+            </div>
+            <div>
+                <label for="contact">Contact Number:</label>
+                <input type="tel" id="contact" name="contact" required>
+            </div>
+            <div>
+                <label for="service">Select Barangay Service:</label>
+                <select id="service" name="service" required>
+                    <option value="Barangay Clearance">Barangay Clearance</option>
+                    <option value="Barangay Certificate">Barangay Certificate</option>
+                    <option value="Business Permit">Business Permit</option>
+                    <option value="Community Tax Certificate">Community Tax Certificate</option>
+                </select>
+            </div>
+            <input type="submit" value="Proceed to Payment">
+        </form>
+        <a class="back-link" href="../barangay-services.html">← Back to Services</a>
+    </div>
+    <div class="footer">&copy; 2025 e-Pantok. All rights reserved.</div>
+</body>
+</html>

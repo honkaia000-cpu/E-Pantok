@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Barangay Service Requirements</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    /* Layout & theme (kept visually identical) */
+    body { font-family: Arial, Helvetica, sans-serif; background: #f7f7f7; margin: 0; padding: 0; }
+    .header { background-color: #1976d2; color: #fff; padding: 30px 10px; text-align: center; font-size: 2rem; }
+    .container { max-width: 480px; margin: 40px auto 0 auto; background: #fff; border-radius: 16px; box-shadow: 0 8px 32px rgba(25,118,210,0.12); padding: 40px 32px 32px 32px; }
+      .form-group label, .upload-section label { color: #1976d2; font-weight: 600; font-size: 1.08rem; }
+      .form-group textarea { font-family: inherit; background: #f7f7f7; }
+      .upload-section { margin: 24px 0; }
+      .form-actions { display: flex; flex-direction: column; align-items: center; gap: 16px; margin-top: 24px; }
+      .modern-btn { background: #1976d2; color: #fff; border: none; border-radius: 10px; padding: 16px 32px; font-size: 1.15rem; font-weight: bold; cursor: pointer; box-shadow: 0 4px 16px rgba(25,118,210,0.10); transition: background 0.2s, box-shadow 0.2s; }
+      .modern-btn:hover { background: #1565c0; box-shadow: 0 6px 24px rgba(25,118,210,0.16); }
+      #upload-btn { background: #1976d2; color: #fff; border-radius: 10px; padding: 12px 28px; font-size: 1.08rem; font-weight: 600; box-shadow: 0 2px 8px rgba(25,118,210,0.08); transition: background 0.2s; }
+      #upload-btn:hover { background: #1565c0; }
+      .back-link { margin-top: 32px; }
+    h2 { color: #1976d2; text-align: center; }
+    ul { margin-bottom: 18px; }
+    .upload-section { margin: 18px 0; }
+    .footer { background-color: #f1f1f1; padding: 10px; text-align: center; margin-top: 40px; font-size: 1rem; color: #888; }
+    .back-link { display: block; text-align: center; margin-top: 22px; color: #1976d2; text-decoration: none; font-weight: 500; transition: color 0.2s; }
+    .back-link:hover { color: #0d47a1; text-decoration: underline; }
+    .preview-img { display: block; margin: 10px auto; max-width: 180px; border-radius: 8px; }
+    input[type="submit"] { background: #1976d2; color: #fff; border: none; border-radius: 8px; padding: 14px; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin-top: 10px; transition: background 0.2s, box-shadow 0.2s; box-shadow: 0 2px 8px rgba(25, 118, 210, 0.08); }
+    input[type="submit"]:hover { background: #1565c0; }
+
+    /* Responsive progress strip */
+    @media (max-width: 600px) {
+      .progress-bar-container { max-width: none !important; width: 100vw !important; margin-left: -2vw; margin-right: -2vw; }
+    }
+  </style>
+  <script>
+    (function () {
+      // safe supabase init (keeps original behavior)
+      const supabase = (window.supabase && window.supabase.createClient)
+        ? window.supabase.createClient('https://vklhpcwjuqfleushgbdj.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZrbGhwY3dqdXFmbGV1c2hnYmRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2ODUzNjIsImV4cCI6MjA3MzI2MTM2Mn0.fiYh7LLEPpuWgBFceqUQ79S-fR71p7XfoBgXPTDGijg')
+        : null;
+
+      // Minimal logging helpers (kept for tests/debugging)
+      function pushLog(entry) {
+        try {
+          const arr = JSON.parse(localStorage.getItem('lastProceedLog') || '[]');
+          arr.push(Object.assign({ time: new Date().toISOString() }, entry));
+          localStorage.setItem('lastProceedLog', JSON.stringify(arr));
+        } catch (e) { /* swallow logging errors */ }
+      }
+
+      // initial diagnostic
+      try { localStorage.removeItem('lastError'); } catch (e) {}
+      pushLog({ step: 'script-init', info: JSON.parse(localStorage.getItem('paymentInfo') || '{}') });
+      localStorage.setItem('lastProceedAction', 'script-init');
+
+      document.addEventListener('DOMContentLoaded', () => {
+        let info = loadInfo();
+        const requirements = getRequirements();
+        const serviceNameEl = document.getElementById('service-name');
+
+        // apply query param service if present
+        try {
+          const svc = new URLSearchParams(window.location.search).get('service');
+          if (svc && !info.service) { info.service = decodeURIComponent(svc); localStorage.setItem('paymentInfo', JSON.stringify(info)); }
+        } catch (e) {}
+
+        window.addEventListener('storage', (e) => {
+          if (e.key === 'paymentInfo') {
+            const newInfo = loadInfo();
+            pushLog({ step: 'storage-event', oldInfo: info, newInfo });
+            info = newInfo || {};
+            if (newInfo && newInfo.service) {
+              serviceNameEl.textContent = newInfo.service;
+              renderRequirements(newInfo.service);
+            }
+          }
+        });
+
+        if (!info.service) {
+          // show selector and poll for tests that may write paymentInfo after load
+          serviceNameEl.textContent = 'No service selected';
+          showServiceSelector(Object.keys(requirements));
+
+          pushLog({ step: 'start-poll' });
+          let pollCount = 0;
+          const poll = setInterval(() => {
+            pollCount++;
+            try {
+              const maybe = loadInfo();
+              if (maybe && maybe.service) {
+                pushLog({ step: 'poll-detected', maybe });
+                info = maybe;
+                serviceNameEl.textContent = info.service;
+                renderRequirements(info.service);
+                clearInterval(poll);
+              } else if (pollCount > 20) { pushLog({ step: 'poll-timeout' }); clearInterval(poll); }
+            } catch (e) { clearInterval(poll); }
+          }, 100);
+
+          return;
+        }
+
+        // normal render
+        serviceNameEl.textContent = info.service || 'Barangay Service';
+        renderRequirements(info.service);
+
+        // small retry if nothing rendered
+        setTimeout(() => { const ul = document.getElementById('req-list'); if (info.service && ul && ul.children.length === 0) { pushLog({ step: 'post-render-empty', info }); renderRequirements(info.service); } }, 150);
+
+        function renderRequirements(service) {
+          const raw = String(service || '').trim();
+          const keys = Object.keys(requirements);
+          let serviceKey = keys.find(k => k.toLowerCase() === raw.toLowerCase());
+          if (!serviceKey && raw) serviceKey = keys.find(k => k.toLowerCase().includes(raw.toLowerCase()));
+          if (!serviceKey && raw) serviceKey = keys.find(k => raw.toLowerCase().includes(k.toLowerCase()));
+
+          pushLog({ step: 'renderRequirements', raw, serviceKey, hasRequirements: !!requirements[serviceKey] });
+
+          let reqList = requirements[serviceKey] || [];
+          const ul = document.getElementById('req-list'); ul.innerHTML = '';
+
+          if (reqList.length === 0 && raw) {
+            // token intersection fuzzy match
+            try {
+              const norm = s => String(s || '').toLowerCase().replace(/[^\w\s]/g,'').split(/\s+/).filter(Boolean);
+              const rawWords = norm(raw);
+              if (rawWords.length > 0) {
+                let best = { key: null, score: 0 };
+                Object.keys(requirements).forEach(k => {
+                  const kWords = norm(k);
+                  const shared = kWords.filter(w => rawWords.includes(w));
+                  if (shared.length > best.score) best = { key: k, score: shared.length };
+                });
+                if (best.key && best.score > 0) { pushLog({ step: 'fuzzy-token-match', raw, matched: best.key, score: best.score }); serviceKey = best.key; reqList = requirements[serviceKey] || []; }
+              }
+            } catch (e) {}
+          }
+
+          if (reqList.length === 0) {
+            pushLog({ step: 'render-empty', raw, serviceKey, keys: Object.keys(requirements) });
+            const li = document.createElement('li'); li.textContent = serviceKey ? 'No specific requirements listed for this service.' : 'No service selected.'; ul.appendChild(li);
+          } else {
+            reqList.forEach(r => { const li = document.createElement('li'); li.textContent = r; ul.appendChild(li); });
+          }
+
+          if (serviceNameEl) serviceNameEl.textContent = serviceKey || raw || 'Barangay Service';
+
+          // Removed upload history logic for correct flow
+        }
+
+        // helper closures used above
+        function loadInfo() { try { return JSON.parse(localStorage.getItem('paymentInfo') || '{}'); } catch (e) { return {}; } }
+
+        function getRequirements() {
+          return {
+            'Barangay Clearance': ['Valid ID (Government-issued)', 'Proof of Residency', 'Application Form'],
+            'Barangay Certificate': ['Valid ID', 'Proof of Residency'],
+            'Business Permit': ['DTI/SEC Registration', 'Valid ID', 'Barangay Clearance'],
+            'Community Tax Certificate': ['Valid ID', 'Proof of Residency', 'Previous CTC (if renewal)'],
+            'Barangay Indigency': ['Valid ID', 'Proof of Residency']
+          };
+        }
+
+        function showServiceSelector(options) {
+          const selWrapper = document.createElement('div'); selWrapper.style.margin = '12px 0 18px 0';
+          selWrapper.innerHTML = `<label for="service-select" style="display:block;margin-bottom:6px;color:#1976d2;font-weight:500;">Select a service:</label>
+            <select id="service-select" style="width:100%;padding:10px;border-radius:6px;border:1px solid #bdbdbd;margin-bottom:12px;">${options.map(s=>`<option value="${s}">${s}</option>`).join('')}</select>
+            <div style="display:flex;gap:8px;align-items:center;"><button id="apply-service" type="button" style="background:#1976d2;color:#fff;border:none;border-radius:6px;padding:10px 14px;cursor:pointer;">Show Requirements</button>
+            <a class="back-link" href="../barangay-services.html" style="margin-left:auto;">← Back to Services</a></div>`;
+          const container = document.querySelector('.container'); container.insertBefore(selWrapper, document.getElementById('req-list'));
+          document.getElementById('apply-service').addEventListener('click', () => { const selected = document.getElementById('service-select').value; const info = loadInfo(); info.service = selected; localStorage.setItem('paymentInfo', JSON.stringify(info)); renderRequirements(selected); pushLog({ step: 'auto-selected-service', value: selected }); });
+        }
+
+        // expose helpers for inline attributes and tests
+        window.previewImage = function (event) {
+          const file = event.target.files[0]; if (!file) return; const reader = new FileReader();
+          reader.onload = function (e) { const img = document.getElementById('img-preview'); img.src = e.target.result; img.style.display = 'block'; };
+          reader.readAsDataURL(file);
+        };
+
+        window.proceedToPayment = async function (evt) {
+          if (evt && evt.preventDefault) evt.preventDefault();
+          const submitBtn = document.querySelector('input[type="submit"]'); if (submitBtn) { submitBtn.disabled = true; submitBtn.value = 'Processing…'; }
+          const statusEl = document.getElementById('requirements-status'); try {
+            const fileInput = document.getElementById('requirement-image'); const file = fileInput ? fileInput.files[0] : null; pushLog({ step: 'file-check', fileName: file ? file.name : null, fileSize: file ? file.size : null });
+            let info = loadInfo(); pushLog({ step: 'checked-info', hasService: !!info.service, info });
+
+            if (!info.service) {
+              const sel = document.getElementById('service-select');
+              if (sel) { info.service = sel.value; localStorage.setItem('paymentInfo', JSON.stringify(info)); pushLog({ step: 'auto-selected-service', value: sel.value }); }
+              else { info.service = 'Barangay Clearance'; localStorage.setItem('paymentInfo', JSON.stringify(info)); pushLog({ step: 'default-service-auto-accepted' }); }
+            }
+
+            if (file) {
+              try {
+                const filename = `${(info.name || 'user')}_${Date.now()}_${file.name}`;
+                const { data, error } = await supabase.storage.from('requirements').upload(filename, file);
+                if (error) throw error;
+                const { data: publicUrlData } = supabase.storage.from('requirements').getPublicUrl(filename);
+                info.requirementImageUrl = publicUrlData.publicUrl;
+                const uploadedFiles = JSON.parse(localStorage.getItem('uploadedFiles') || '[]'); uploadedFiles.push({ name: info.name, service: info.service, filename: file.name, url: info.requirementImageUrl, time: new Date().toLocaleString() }); localStorage.setItem('uploadedFiles', JSON.stringify(uploadedFiles));
+                pushLog({ step: 'upload-success', url: info.requirementImageUrl });
+              } catch (uploadErr) {
+                pushLog({ step: 'upload-failed', reason: String(uploadErr) });
+                // fallback to local dataURL copy
+                const dataUrl = await new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = () => reject(new Error('Failed to read file')); reader.readAsDataURL(file); });
+                info.requirementImageUrl = dataUrl;
+                const uploadedFiles = JSON.parse(localStorage.getItem('uploadedFiles') || '[]'); uploadedFiles.push({ name: info.name, service: info.service, filename: file.name, url: info.requirementImageUrl, time: new Date().toLocaleString(), local: true }); localStorage.setItem('uploadedFiles', JSON.stringify(uploadedFiles));
+                if (statusEl) { statusEl.style.display = 'block'; statusEl.style.color = '#f57c00'; statusEl.textContent = 'Upload failed; proceeding using local copy.'; }
+                document.getElementById('manual-pay-link').style.display = 'inline-block';
+              }
+            }
+
+            localStorage.setItem('paymentInfo', JSON.stringify(info)); if (statusEl) { statusEl.style.color = '#2e7d32'; statusEl.textContent = 'Proceeding to payment...'; }
+            pushLog({ step: 'about-to-redirect', info }); localStorage.setItem('lastProceedAction', 'redirect-called');
+
+            // redirect with multiple fallbacks (keeps original behavior)
+            setTimeout(() => {
+              try { window.location.assign('../payment-methods.html'); } catch (e) {}
+              try { window.location.href = '../payment-methods.html'; } catch (e) {}
+              try { window.top.location.assign('../payment-methods.html'); } catch (e) {}
+              try { window.top.location.replace('../payment-methods.html'); } catch (e) {}
+              try { const a = document.createElement('a'); a.href = '../payment-methods.html'; a.target = '_top'; a.style.display = 'none'; document.body.appendChild(a); a.click(); a.remove(); } catch (e) {}
+              pushLog({ step: 'redirect-invoked' }); localStorage.setItem('lastProceedAction', 'replace-invoked');
+
+              setTimeout(() => { try { const prev = localStorage.getItem('lastProceedAction') || ''; if (!prev || prev.indexOf('redirected') === -1) { pushLog({ step: 'redirect-forced' }); localStorage.setItem('lastProceedAction', 'forced-replace'); try { window.top.location.replace('../payment-methods.html'); } catch (e) {} } } catch (e) {} }, 300);
+            }, 30);
+
+          } catch (err) {
+            console.error('Error during proceedToPayment:', err);
+            if (statusEl) { statusEl.style.display = 'block'; statusEl.style.color = '#d32f2f'; statusEl.textContent = 'Error: ' + (err.message || String(err)); }
+            document.getElementById('manual-pay-link').style.display = 'inline-block';
+          } finally {
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.value = 'Proceed to Payment'; }
+          }
+        };
+
+      }); // DOMContentLoaded
+
+    }()); // IIFE
+  </script>
+</head>
+<body>
+  <div class="header">Barangay Service Requirements</div>
+
+  <div class="progress-bar-container" style="max-width:480px;width:100%;margin:24px auto 0 auto;">
+    <div style="font-size:1rem;color:#1976d2;text-align:center;margin-bottom:6px;">Step 2 of 3: Submit Requirements</div>
+    <div style="background:#e3f2fd;border-radius:8px;overflow:hidden;height:16px;width:100%;box-shadow:0 2px 8px rgba(25,118,210,0.08);">
+      <div style="background:#1976d2;height:100%;width:66%;transition:width 0.3s; border-radius:8px;"></div>
+    </div>
+  </div>
+
+  <div class="container">
+    <h2 id="service-name"></h2>
+    <p>Please prepare the following requirements:</p>
+    <ul id="req-list"></ul>
+
+    <form onsubmit="proceedToPayment(event); return false;">
+      <div class="upload-section">
+        <label for="requirement-image">Upload the Photo/Document:</label>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:12px;">
+          <input type="file" id="requirement-image" accept="image/*" onchange="previewImage(event)" style="display:none;" required>
+          <label for="requirement-image" id="upload-btn">Choose File</label>
+          <span id="file-name" style="color:#555;font-size:0.98rem;"></span>
+        </div>
+        <img id="img-preview" class="preview-img" src="" alt="Preview" style="display:none;">
+      </div>
+
+      <div class="form-group" style="margin-bottom:18px;">
+        <label for="purpose">Purpose of Request:</label>
+        <textarea id="purpose" name="purpose" rows="3" placeholder="Enter the purpose of your request" style="width:100%;padding:10px;border-radius:8px;border:1px solid #bdbdbd;font-size:1rem;resize:none;"></textarea>
+      </div>
+
+      <div class="form-actions">
+        <input type="submit" value="Proceed to Payment" class="modern-btn">
+        <a id="manual-pay-link" href="../payment-methods.html" style="display:none;" class="modern-btn">Continue to payment manually</a>
+      </div>
+      <div id="requirements-status" style="margin-top:12px;display:none;font-weight:500;color:#1976d2;"></div>
+    </form>
+
+    <a class="back-link" href="fill-up-form.html">← Back to Fill Up Form</a>
+  </div>
+
+  <div class="footer">&copy; 2025 E-Pantok. All rights reserved.</div>
+</body>
+</html>
