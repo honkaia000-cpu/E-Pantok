@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - E-Pantok</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: Arial, Helvetica, sans-serif; background: #f7f7f7; margin: 0; padding: 0; }
+        .header { background-color: #1976d2; color: #fff; padding: 30px 10px; text-align: center; font-size: 2.2rem; letter-spacing: 1px; }
+        .container { max-width: 380px; margin: 40px auto 0 auto; background: #fff; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); padding: 32px 24px 24px 24px; }
+        h1 { margin-top: 0; color: #1976d2; text-align: center; font-size: 1.7rem; }
+        form { display: flex; flex-direction: column; gap: 16px; }
+        label { font-weight: 500; color: #1976d2; margin-bottom: 4px; }
+        input[type="text"], input[type="password"] { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #bdbdbd; font-size: 1rem; background: #f9f9f9; transition: border 0.2s; }
+        input[type="text"]:focus, input[type="password"]:focus { border: 1.5px solid #1976d2; outline: none; background: #e3f2fd; }
+        input[type="submit"] { background: #1976d2; color: #fff; border: none; border-radius: 8px; padding: 14px; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin-top: 10px; transition: background 0.2s, box-shadow 0.2s; box-shadow: 0 2px 8px rgba(25, 118, 210, 0.08); }
+        input[type="submit"]:hover { background: #1565c0; box-shadow: 0 2px 8px rgba(25, 118, 210, 0.15); }
+        .register-link { display: block; text-align: center; margin-top: 18px; color: #1976d2; text-decoration: none; font-weight: 500; transition: color 0.2s; }
+        .register-link:hover { color: #0d47a1; text-decoration: underline; }
+        .footer { background-color: #f1f1f1; padding: 10px; text-align: center; margin-top: 40px; font-size: 1rem; color: #888; }
+        @media (max-width: 600px) {
+            .container { margin: 16px; padding: 18px 8px 16px 8px; }
+            .header { font-size: 1.3rem; padding: 18px 4px; }
+        }
+    </style>
+    <script>
+        function handleLogin(event) {
+            event.preventDefault();
+            const statusEl = document.getElementById('login-status');
+            const submitBtn = document.querySelector('input[type="submit"]');
+            if (submitBtn) { submitBtn.disabled = true; submitBtn.value = 'Signing in...'; }
+            if (statusEl) { statusEl.style.display = 'none'; statusEl.textContent = ''; statusEl.style.color = '#d32f2f'; }
+
+            const email = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+
+            if (!email || !password) {
+                if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'Please enter email and password.'; }
+                if (submitBtn) { submitBtn.disabled = false; submitBtn.value = 'Login'; }
+                return;
+            }
+
+            try {
+                // Check localStorage for user
+                const users = JSON.parse(localStorage.getItem('epantok_users') || '[]');
+                const foundUser = users.find(u => u.email === email && u.password === password);
+                
+                if (foundUser) {
+                    // Successful login
+                    localStorage.setItem('epantok_user', JSON.stringify({ email: foundUser.email, loginTime: new Date().getTime() }));
+                    if (statusEl) { statusEl.style.display = 'block'; statusEl.style.color = '#2e7d32'; statusEl.textContent = 'Login successful — redirecting...'; }
+                    console.log('Login successful for', foundUser.email);
+                    setTimeout(() => { window.location.assign('../../barangay-services.html'); }, 800);
+                    return;
+                }
+
+                // Invalid credentials
+                if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'Invalid email or password. Please try again or register if you don\'t have an account.'; }
+                
+            } catch (err) {
+                console.error('Login error:', err);
+                if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'An error occurred during login. Please try again.'; }
+            } finally {
+                if (submitBtn) { submitBtn.disabled = false; submitBtn.value = 'Login'; }
+            }
+        }
+
+        // Attach submit handler on DOM ready
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('login-form');
+            if (form) form.addEventListener('submit', handleLogin);
+        });
+    </script> 
+</head>
+<body>
+    <div class="header">E-Pantok Login</div>
+    <div class="container">
+        <h1>Login</h1>
+        <form id="login-form">
+            <div>
+                <label for="username">Email Address:</label>
+                <input type="text" id="username" name="username" required autocomplete="email">
+            </div>
+            <div>
+                <label for="password">Password:</label>
+                <div style="position:relative;display:flex;align-items:center;">
+                    <input type="password" id="password" name="password" required autocomplete="current-password" style="padding-right:36px;">
+                    <button type="button" id="toggle-login-password" tabindex="-1" style="position:absolute;right:8px;background:none;border:none;cursor:pointer;padding:0;outline:none;">
+                        <svg id="eye-login" xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24"><path stroke="#1976d2" stroke-width="2" d="M1.5 12S5.5 5.5 12 5.5 22.5 12 22.5 12 18.5 18.5 12 18.5 1.5 12 1.5 12Z"/><circle cx="12" cy="12" r="3.5" stroke="#1976d2" stroke-width="2"/></svg>
+                    </button>
+                </div>
+            </div>
+            <input type="submit" value="Login">
+        </form>
+        <div id="login-status" style="margin-top:12px;color:#d32f2f;font-weight:500;display:none;"></div>
+        <a class="register-link" href="register-interface-website.html">Don't have an account? Register</a>
+    </div>
+    <div class="footer">&copy; 2025 E-Pantok. All rights reserved.</div>
+</body>
+<script>
+// Toggle password visibility for login
+document.getElementById('toggle-login-password').addEventListener('click', function() {
+    const pwd = document.getElementById('password');
+    const eye = document.getElementById('eye-login');
+    if (pwd.type === 'password') {
+        pwd.type = 'text';
+        eye.innerHTML = '<circle cx="12" cy="12" r="3.5" stroke="#1976d2" stroke-width="2"/><path stroke="#1976d2" stroke-width="2" d="M1.5 12S5.5 5.5 12 5.5 22.5 12 22.5 12 18.5 18.5 12 18.5 1.5 12 1.5 12Z"/><line x1="5" y1="19" x2="19" y2="5" stroke="#1976d2" stroke-width="2"/>';
+    } else {
+        pwd.type = 'password';
+        eye.innerHTML = '<path stroke="#1976d2" stroke-width="2" d="M1.5 12S5.5 5.5 12 5.5 22.5 12 22.5 12 18.5 18.5 12 18.5 1.5 12 1.5 12Z"/><circle cx="12" cy="12" r="3.5" stroke="#1976d2" stroke-width="2"/>';
+    }
+});
+</script>
+</html>
