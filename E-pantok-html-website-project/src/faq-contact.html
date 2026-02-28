@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FAQ & Contact - E-Pantok</title>
+    <style>
+        body { font-family: Arial, Helvetica, sans-serif; background: #f7f7f7; margin: 0; padding: 0; }
+        .header { background-color: #1976d2; color: #fff; padding: 30px 10px; text-align: center; font-size: 2rem; }
+        .container { max-width: 520px; margin: 40px auto 0 auto; background: #fff; border-radius: 16px; box-shadow: 0 8px 32px rgba(25,118,210,0.12); padding: 40px 32px 32px 32px; }
+        .modern-btn { background: #1976d2; color: #fff; border: none; border-radius: 10px; padding: 16px 32px; font-size: 1.15rem; font-weight: bold; cursor: pointer; box-shadow: 0 4px 16px rgba(25,118,210,0.10); transition: background 0.2s, box-shadow 0.2s; display: block; margin: 0 auto; }
+        .modern-btn:hover { background: #1565c0; box-shadow: 0 6px 24px rgba(25,118,210,0.16); }
+        .footer { margin-top: 48px; }
+        h2 { color: #1976d2; text-align: center; }
+        .faq-section { margin-bottom: 32px; }
+        .faq-item { margin-bottom: 12px; }
+        .faq-q { background: #e3f2fd; color: #1976d2; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: 500; }
+        .faq-a { display: none; background: #f9f9f9; padding: 12px; border-radius: 0 0 8px 8px; border-top: 1px solid #e3f2fd; }
+        .faq-q.active { border-radius: 8px 8px 0 0; }
+        .contact-section { margin-top: 24px; }
+        label { font-weight: 500; color: #1976d2; margin-bottom: 4px; }
+        input, textarea { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #bdbdbd; font-size: 1rem; background: #f9f9f9; margin-bottom: 12px; }
+        input[type="submit"] { background: #1976d2; color: #fff; border: none; border-radius: 8px; padding: 14px; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin-top: 10px; transition: background 0.2s, box-shadow 0.2s; box-shadow: 0 2px 8px rgba(25, 118, 210, 0.08); }
+        input[type="submit"]:hover { background: #1565c0; }
+        .footer { background-color: #f1f1f1; padding: 10px; text-align: center; margin-top: 40px; font-size: 1rem; color: #888; }
+        .success-msg { color: #388e3c; background: #e8f5e9; border-radius: 8px; padding: 10px; margin-bottom: 12px; text-align: center; display: none; }
+    </style>
+    <script>
+        // FAQ accordion logic
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.faq-q').forEach(q => {
+                q.addEventListener('click', function() {
+                    const a = this.nextElementSibling;
+                    if (a.style.display === 'block') {
+                        a.style.display = 'none';
+                        this.classList.remove('active');
+                    } else {
+                        document.querySelectorAll('.faq-a').forEach(x => x.style.display = 'none');
+                        document.querySelectorAll('.faq-q').forEach(x => x.classList.remove('active'));
+                        a.style.display = 'block';
+                        this.classList.add('active');
+                    }
+                });
+            });
+        });
+        // Contact form logic
+        function submitContact(event) {
+            event.preventDefault();
+            const name = document.getElementById('contact-name').value.trim();
+            const email = document.getElementById('contact-email').value.trim();
+            const msg = document.getElementById('contact-msg').value.trim();
+            if (!name || !email || !msg) {
+                alert('Please fill in all fields.');
+                return;
+            }
+            // Store message in localStorage for demo
+            let messages = JSON.parse(localStorage.getItem('contactMessages') || '[]');
+            messages.push({ name, email, msg, time: new Date().toLocaleString() });
+            localStorage.setItem('contactMessages', JSON.stringify(messages));
+            document.getElementById('success-msg').style.display = 'block';
+            document.getElementById('contact-form').reset();
+            setTimeout(() => { document.getElementById('success-msg').style.display = 'none'; }, 3000);
+        }
+    </script>
+</head>
+<body>
+    <div class="header">FAQ & Contact Us</div>
+    <div class="container">
+        <h2>Frequently Asked Questions</h2>
+        <div class="faq-section">
+            <div class="faq-item">
+                <div class="faq-q">How do I request a barangay document?</div>
+                <div class="faq-a">Go to the Barangay Services page, select the service you need, fill up the form, and follow the steps to submit your requirements and payment.</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-q">How can I track my request status?</div>
+                <div class="faq-a">Use the Track Request page and enter your name or reference number to view the status of your request.</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-q">What documents do I need to upload?</div>
+                <div class="faq-a">The required documents depend on the service. The requirements will be shown after you select a service.</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-q">How do I contact support?</div>
+                <div class="faq-a">You can use the contact form below to send us your questions or concerns.</div>
+            </div>
+        </div>
+        <h2>Contact Us</h2>
+        <div class="success-msg" id="success-msg">Your message has been sent!</div>
+        <form id="contact-form" onsubmit="submitContact(event)">
+            <label for="contact-name">Name:</label>
+            <input type="text" id="contact-name" name="contact-name" required>
+            <label for="contact-email">Email:</label>
+            <input type="email" id="contact-email" name="contact-email" required>
+            <label for="contact-msg">Message:</label>
+            <textarea id="contact-msg" name="contact-msg" rows="4" required></textarea>
+            <input type="submit" value="Send Message">
+        </form>
+    </div>
+    <div class="footer">&copy; 2025 E-Pantok. All rights reserved.</div>
+</body>
+</html>

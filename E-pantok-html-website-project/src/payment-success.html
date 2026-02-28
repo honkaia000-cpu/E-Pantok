@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Successful - E-Pantok</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: Arial, Helvetica, sans-serif; background: #f7f7f7; margin: 0; padding: 0; }
+        .header { background-color: #1976d2; color: #fff; padding: 30px 10px; text-align: center; font-size: 2.2rem; letter-spacing: 1px; }
+        .container { max-width: 420px; margin: 40px auto 0 auto; background: #fff; border-radius: 16px; box-shadow: 0 8px 32px rgba(25,118,210,0.12); padding: 40px 32px 32px 32px; text-align: center; }
+        .modern-btn { background: #1976d2; color: #fff; border: none; border-radius: 10px; padding: 16px 32px; font-size: 1.15rem; font-weight: bold; cursor: pointer; box-shadow: 0 4px 16px rgba(25,118,210,0.10); transition: background 0.2s, box-shadow 0.2s; display: block; margin: 0 auto; }
+        .modern-btn:hover { background: #1565c0; box-shadow: 0 6px 24px rgba(25,118,210,0.16); }
+        .footer { margin-top: 48px; }
+        .success-icon { font-size: 3rem; color: #43a047; margin-bottom: 16px; }
+        .receipt { background: #e3f2fd; border-radius: 8px; padding: 18px 12px; margin: 18px 0; text-align: left; font-size: 1.05rem; }
+        .footer { background-color: #f1f1f1; padding: 10px; text-align: center; margin-top: 40px; font-size: 1rem; color: #888; }
+        .back-link { display: block; text-align: center; margin-top: 22px; color: #1976d2; text-decoration: none; font-weight: 500; transition: color 0.2s; }
+        .back-link:hover { color: #0d47a1; text-decoration: underline; }
+        @media (max-width: 600px) {
+            .container { margin: 16px; padding: 18px 8px 16px 8px; }
+            .header { font-size: 1.3rem; padding: 18px 4px; }
+        }
+    </style>
+        <style>
+            @media (max-width: 600px) {
+                .progress-bar-container {
+                    max-width: none !important;
+                    width: 100vw !important;
+                    margin-left: -2vw;
+                    margin-right: -2vw;
+                }
+            }
+        </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Read stored paymentInfo and test debug payloads
+            let paymentInfo = JSON.parse(localStorage.getItem('paymentInfo')) || { service: "Barangay Clearance" };
+            let paymentDebug = null;
+            try { paymentDebug = JSON.parse(localStorage.getItem('paymentDebug') || 'null'); } catch (e) { paymentDebug = null; }
+
+            // Merge debug info if handler wrote additional fields
+            if (paymentDebug) {
+                // Ensure debug fields fill in missing values
+                paymentInfo = Object.assign({}, paymentInfo, paymentDebug);
+                try { localStorage.setItem('paymentInfo', JSON.stringify(paymentInfo)); } catch (e) { /* ignore */ }
+            }
+
+            // Generate random reference number
+            function generateReferenceNumber() {
+                const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+                let ref = '';
+                for (let i = 0; i < 10; i++) {
+                    ref += chars.charAt(Math.floor(Math.random() * chars.length));
+                }
+                return ref;
+            }
+            const referenceNumber = generateReferenceNumber();
+            paymentInfo.referenceNumber = referenceNumber;
+
+            // Apply sensible defaults
+            const defaults = { name: "Juan Dela Cruz", service: "Barangay Clearance", paymentMethod: "", amount: "", date: new Date().toLocaleString(), referenceNumber: referenceNumber };
+            paymentInfo = Object.assign({}, defaults, paymentInfo);
+
+            document.getElementById('receipt-name').textContent = paymentInfo.name || "";
+            document.getElementById('receipt-service').textContent = paymentInfo.service || "";
+            document.getElementById('receipt-method').textContent = paymentInfo.paymentMethod || "";
+            document.getElementById('receipt-amount').textContent = paymentInfo.amount || "";
+            document.getElementById('receipt-date').textContent = paymentInfo.date || "";
+            document.getElementById('receipt-ref').textContent = paymentInfo.referenceNumber || referenceNumber;
+        });
+    </script>
+</head>
+<body>
+        <div class="header">E-Pantok Payment</div>
+    <div class="progress-bar-container" style="max-width:420px;width:100%;margin:24px auto 0 auto;">
+            <div style="font-size:1rem;color:#1976d2;text-align:center;margin-bottom:6px;">Step 3 of 3: Payment Success</div>
+            <div style="background:#e3f2fd;border-radius:8px;overflow:hidden;height:16px;width:100%;box-shadow:0 2px 8px rgba(25,118,210,0.08);">
+                <div style="background:#1976d2;height:100%;width:100%;transition:width 0.3s; border-radius:8px;"></div>
+            </div>
+        </div>
+    <div class="container">
+        <div class="success-icon">✅</div>
+        <h2>Payment Successful!</h2>
+        <p>Your payment has been processed.</p>
+        <div class="receipt">
+            <strong>Payment Receipt</strong><br><br>
+            <b>Reference Number:</b> <span id="receipt-ref"></span><br>
+            <b>Name:</b> <span id="receipt-name"></span><br>
+            <b>Service:</b> <span id="receipt-service"></span><br>
+            <b>Payment Method:</b> <span id="receipt-method"></span><br>
+            <b>Amount:</b> <span id="receipt-amount"></span><br>
+            <b>Date:</b> <span id="receipt-date"></span>
+        </div>
+        <a class="back-link" href="barangay-services.html">← Back to Services</a>
+    </div>
+    <div class="footer">&copy; 2025 E-Pantok. All rights reserved.</div>
+</body>
+</html>

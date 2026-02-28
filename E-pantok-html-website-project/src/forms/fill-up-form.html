@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fill Up Form</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: Arial, Helvetica, sans-serif; background: #f7f7f7; margin: 0; padding: 0; }
+        .header { background-color: #1976d2; color: #fff; padding: 30px 10px; text-align: center; font-size: 2.2rem; letter-spacing: 1px; }
+        .container { max-width: 420px; margin: 40px auto 0 auto; background: #fff; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); padding: 32px 24px 24px 24px; }
+        h1 { margin-top: 0; color: #1976d2; text-align: center; font-size: 1.7rem; }
+        form { display: flex; flex-direction: column; gap: 14px; }
+        label { font-weight: 500; color: #1976d2; margin-bottom: 4px; }
+        input[type="text"], input[type="tel"], select { padding: 10px; border-radius: 6px; border: 1px solid #bdbdbd; font-size: 1rem; background: #f9f9f9; transition: border 0.2s; }
+        input[type="text"]:focus, input[type="tel"]:focus, select:focus { border: 1.5px solid #1976d2; outline: none; background: #e3f2fd; }
+        input[type="submit"] { background: #1976d2; color: #fff; border: none; border-radius: 8px; padding: 14px; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin-top: 10px; transition: background 0.2s, box-shadow 0.2s; box-shadow: 0 2px 8px rgba(25, 118, 210, 0.08); }
+        input[type="submit"]:hover { background: #1565c0; box-shadow: 0 2px 8px rgba(25, 118, 210, 0.15); }
+        .back-link { display: block; text-align: center; margin-top: 22px; color: #1976d2; text-decoration: none; font-weight: 500; transition: color 0.2s; }
+        .back-link:hover { color: #0d47a1; text-decoration: underline; }
+        .footer { background-color: #f1f1f1; padding: 10px; text-align: center; margin-top: 40px; font-size: 1rem; color: #888; }
+        @media (max-width: 600px) {
+            .container { margin: 16px; padding: 18px 8px 16px 8px; }
+            .header { font-size: 1.3rem; padding: 18px 4px; }
+        }
+    </style>
+        <style>
+            @media (max-width: 600px) {
+                .progress-bar-container {
+                    max-width: none !important;
+                    width: 100vw !important;
+                    margin-left: -2vw;
+                    margin-right: -2vw;
+                }
+            }
+        </style>
+        <!-- Modal Styles -->
+    <script>
+        // Get service from query string and set as default
+        document.addEventListener('DOMContentLoaded', function() {
+            const params = new URLSearchParams(window.location.search);
+            const service = params.get('service');
+            if (service) {
+                document.getElementById('service').value = service;
+            }
+        });
+        function redirectToRequirements(event) {
+            event.preventDefault();
+            const name = document.getElementById('name')?.value || "";
+            const address = document.getElementById('address')?.value || "";
+            const contact = document.getElementById('contact')?.value || "";
+
+            // Prefer a form field with id 'service' if present, otherwise fall back to URL param
+            let serviceEl = document.getElementById('service');
+            const service = serviceEl ? (serviceEl.value || "") : (new URLSearchParams(window.location.search).get('service') || "");
+
+            // Collect any dynamic fields inside #dynamic-fields (if present)
+            const dynamic = {};
+            const dynContainer = document.getElementById('dynamic-fields');
+            if (dynContainer) {
+                dynContainer.querySelectorAll('input, select, textarea').forEach(el => {
+                    if (el.id) dynamic[el.id] = el.value || "";
+                });
+            }
+
+            localStorage.setItem('paymentInfo', JSON.stringify({
+                name, address, contact, service, ...dynamic
+            }));
+            window.location.href = "barangay-requirements.html";
+        }
+    </script>
+</head>
+<body>
+        <div class="header">E-Pantok Fill Up Form</div>
+    <div class="progress-bar-container" style="max-width:420px;width:100%;margin:24px auto 0 auto;">
+            <div style="font-size:1rem;color:#1976d2;text-align:center;margin-bottom:6px;">Step 1 of 3: Fill Up Form</div>
+            <div style="background:#e3f2fd;border-radius:8px;overflow:hidden;height:16px;width:100%;box-shadow:0 2px 8px rgba(25,118,210,0.08);">
+                <div style="background:#1976d2;height:100%;width:33%;transition:width 0.3s; border-radius:8px;"></div>
+            </div>
+        </div>
+        <div class="container">
+                <h1>Fill Up Form</h1>
+        <form onsubmit="redirectToRequirements(event)">
+            <div style="display: flex; flex-wrap: wrap; gap: 16px;">
+                <div style="flex:1 1 220px; min-width:180px;">
+                    <label for="name">Full Name:</label>
+                    <input type="text" id="name" name="name" required style="width:100%;">
+                </div>
+                <div style="flex:1 1 220px; min-width:180px;">
+                    <label for="address">Address:</label>
+                    <input type="text" id="address" name="address" required style="width:100%;">
+                </div>
+            </div>
+            <div style="margin-top:16px;">
+                <label for="contact">Contact Number:</label>
+                <input type="tel" id="contact" name="contact" required style="width:100%;">
+            </div>
+            <div style="margin-top:12px;">
+                <label for="service">Service:</label>
+                <input type="text" id="service" name="service" readonly placeholder="(select a service from Services)" style="width:100%;background:#f9f9f9;border-radius:6px;padding:10px;border:1px solid #bdbdbd;">
+            </div>
+            <div id="dynamic-fields"></div>
+            <input type="submit" value="Proceed to Requirements">
+        </form>
+        <a class="back-link" href="../barangay-services.html">← Back to Services</a>
+    </div>
+    <div class="footer">&copy; 2025 E-Pantok. All rights reserved.</div>
+</body>
+</html>
